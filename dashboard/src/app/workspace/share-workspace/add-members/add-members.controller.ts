@@ -14,7 +14,7 @@
  */
 'use strict';
 import {CodenvyTeam} from '../../../../components/api/codenvy-team.factory';
-import {CodenvyPermissions} from "../../../../components/api/codenvy-permissions.factory";
+import {CodenvyPermissions} from '../../../../components/api/codenvy-permissions.factory';
 
 /**
  * This class is handling the controller for the add members popup
@@ -87,7 +87,7 @@ export class AddMemberController {
 
   fetchTeamMembers(): void {
     this.isLoading = true;
-    this.codenvyPermissions.fetchTeamPermissions(this.team.id).then(() => {
+    this.codenvyPermissions.fetchOrganizationPermissions(this.team.id).then(() => {
       this.formMemberList();
     }, (error: any) => {
       if (error.status === 304) {
@@ -102,7 +102,7 @@ export class AddMemberController {
    * Combines permissions and users data in one list.
    */
   formMemberList(): void {
-    let permissions = this.codenvyPermissions.getTeamPermissions(this.team.id);
+    let permissions = this.codenvyPermissions.getOrganizationPermissions(this.team.id);
     let existingMembers = this.lodash.pluck(this.users, 'id');
     this.members = [];
     let promises = [];
@@ -158,7 +158,7 @@ export class AddMemberController {
   shareWorkspace() {
     let checkedUsers = [];
 
-    Object.keys(this.membersSelectedStatus).forEach((key) => {
+    Object.keys(this.membersSelectedStatus).forEach((key: string) => {
       if (this.membersSelectedStatus[key] === true) {
         checkedUsers.push(key);
       }
@@ -227,7 +227,7 @@ export class AddMemberController {
     this.isNoSelected = true;
     this.isAllSelected = true;
 
-    Object.keys(this.membersSelectedStatus).forEach((key) => {
+    Object.keys(this.membersSelectedStatus).forEach((key: string) => {
       if (this.membersSelectedStatus[key]) {
         this.isNoSelected = false;
       } else {

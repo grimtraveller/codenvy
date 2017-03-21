@@ -34,8 +34,7 @@ export class CodenvyNavBarController {
     factories: '#/factories',
     administration: '#/onprem/administration',
     usermanagement: '#/admin/usermanagement',
-    // subsection
-    plugins: '#/admin/plugins'
+    organizations: '#/admin/organizations'
   };
   // account dropdown items
   accountItems = [
@@ -58,11 +57,7 @@ export class CodenvyNavBarController {
     name: 'New Workspace'
   }];
   displayLoginItem: boolean;
-  onpremAdminExpanded: boolean;
-  isAdminServiceAvailable: boolean;
   isFactoryServiceAvailable: boolean;
-  isBillingServiceAvailable: boolean;
-  isAdminPluginServiceAvailable: boolean;
 
   private $scope: ng.IScope;
   private $window: ng.IWindowService;
@@ -80,6 +75,7 @@ export class CodenvyNavBarController {
   private profile: any;
   private logoutAPI: any;
   private email: string;
+  private personalAccount: any;
 
   /**
    * Default constructor
@@ -103,11 +99,6 @@ export class CodenvyNavBarController {
     this.$cookies = $cookies;
     this.logoutAPI = this.$resource('/api/auth/logout', {});
 
-    this.userServices = this.codenvyPermissions.getUserServices();
-    if (!this.codenvyPermissions.getSystemPermissions()) {
-      this.codenvyPermissions.fetchSystemPermissions();
-    }
-
     this.displayLoginItem = userDashboardConfig.developmentMode;
     let promiseService = this.cheAPI.getService().fetchServices();
     promiseService.then(() => {
@@ -121,12 +112,6 @@ export class CodenvyNavBarController {
       }
     });
 
-    let promiseAdminService = this.cheAPI.getAdminService().fetchServices();
-    promiseAdminService.then(() => {
-      this.isAdminServiceAvailable = cheAPI.getAdminService().isAdminServiceAvailable();
-      this.isAdminPluginServiceAvailable = cheAPI.getAdminService().isServiceAvailable(cheAPI.getAdminPlugins().getPluginsServicePath());
-    });
-
     this.profile = cheAPI.getProfile().getProfile();
     if (this.profile.attributes) {
       this.email = this.profile.attributes.email;
@@ -137,7 +122,6 @@ export class CodenvyNavBarController {
         this.email = 'N/A ';
       });
     }
-    this.onpremAdminExpanded = true;
 
 
     // highlight navbar menu item
@@ -163,6 +147,30 @@ export class CodenvyNavBarController {
     });
 
     cheAPI.cheWorkspace.fetchWorkspaces();
+    this.userServices = this.codenvyPermissions.getUserServices();
+    if (this.codenvyPermissions.getSystemPermissions()) {
+      this.updateData();
+    } else {
+      this.codenvyPermissions.fetchSystemPermissions().then(() => {
+        this.updateData();
+      });
+    }
+  }
+
+  /**
+   * Update data.
+   */
+  updateData(): void {
+    this.codenvyAPI.getOrganization().fetchOrganizations().then(() => {
+      let organizations = this.codenvyAPI.getOrganization().getOrganizations();
+      if (organizations) {
+        let user = this.codenvyUser.getUser();
+        this.personalAccount = organizations.find((organization: any) => {
+          return organization.qualifiedName === user.name;
+        });
+      }
+    });
+
   }
 
   reload(): void {
@@ -176,17 +184,40 @@ export class CodenvyNavBarController {
     this.$mdSidenav('left').toggle();
   }
 
+  /**
+   * Returns number of workspaces.
+   *
+   * @return {number}
+   */
   getWorkspacesNumber(): number {
     return this.cheAPI.cheWorkspace.getWorkspaces().length;
   }
 
+  /**
+   * Returns number of factories.
+   *
+   * @return {number}
+   */
   getFactoriesNumber(): number {
     let pagesInfo = this.codenvyAPI.getFactory().getPagesInfo();
     return pagesInfo && pagesInfo.count ? pagesInfo.count : this.codenvyAPI.getFactory().factoriesById.size;
   }
 
-  openLinkInNewTab(url: string): void {
-    this.$window.open(url, '_blank');
+  /**
+   * Returns number of root organizations.
+   *
+   * @return {number}
+   */
+  getRootOrganizationsNumber(): number {
+    let organizations = this.codenvyAPI.getOrganization().getOrganizations();
+    if (!organizations) {
+      return 0;
+    }
+    let rootOrganizations = organizations.filter((organization: any) => {
+      return !organization.parent;
+    });
+
+    return rootOrganizations.length;
   }
 
   /**

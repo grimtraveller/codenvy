@@ -19,6 +19,7 @@ import {CodenvyUser} from './codenvy-user.factory';
 import {CodenvyPermissions} from './codenvy-permissions.factory';
 import {CodenvySystem} from './codenvy-system.factory';
 import {CodenvyTeam} from './codenvy-team.factory';
+import {CodenvyOrganization} from './codenvy-organizations.factory';
 import {CodenvyPayment} from './codenvy-payment.factory';
 import {CodenvyLicense} from './codenvy-license.factory';
 import {CodenvyInvoices} from './codenvy-invoices.factory';
@@ -30,21 +31,23 @@ import {CodenvyInvoices} from './codenvy-invoices.factory';
  * @author Florent Benoit
  */
 export class CodenvyAPI {
-  codenvyFactory: CodenvyFactory;
-  codenvyFactoryTemplate: CodenvyFactoryTemplate;
-  codenvyUser: CodenvyUser;
-  codenvyPermissions: CodenvyPermissions;
-  codenvySystem: CodenvySystem;
-  codenvyLicense: CodenvyLicense;
-  codenvyTeam: CodenvyTeam;
-  codenvyPayment: CodenvyPayment;
-  codenvyInvoices: CodenvyInvoices;
+
+  private codenvyFactory: CodenvyFactory;
+  private codenvyFactoryTemplate: CodenvyFactoryTemplate;
+  private codenvyUser: CodenvyUser;
+  private codenvyPermissions: CodenvyPermissions;
+  private codenvySystem: CodenvySystem;
+  private codenvyLicense: CodenvyLicense;
+  private codenvyTeam: CodenvyTeam;
+  private codenvyOrganization: CodenvyOrganization;
+  private codenvyPayment: CodenvyPayment;
+  private codenvyInvoices: CodenvyInvoices;
 
   /**
    * Default constructor that is using resource
    * @ngInject for Dependency injection
    */
-  constructor(codenvyFactory, codenvyFactoryTemplate, codenvyUser, codenvyPermissions, codenvySystem, codenvyLicense, codenvyTeam, codenvyPayment, codenvyInvoices) {
+  constructor(codenvyFactory, codenvyFactoryTemplate, codenvyUser, codenvyPermissions, codenvySystem, codenvyLicense, codenvyTeam, codenvyOrganization: CodenvyOrganization, codenvyPayment, codenvyInvoices) {
     this.codenvyFactory = codenvyFactory;
     this.codenvyFactoryTemplate = codenvyFactoryTemplate;
     this.codenvyUser = codenvyUser;
@@ -52,6 +55,7 @@ export class CodenvyAPI {
     this.codenvySystem = codenvySystem;
     this.codenvyLicense = codenvyLicense;
     this.codenvyTeam = codenvyTeam;
+    this.codenvyOrganization = codenvyOrganization;
     this.codenvyPayment = codenvyPayment;
     this.codenvyInvoices = codenvyInvoices;
   }
@@ -115,6 +119,10 @@ export class CodenvyAPI {
 
   getTeam(): CodenvyTeam {
     return this.codenvyTeam;
+  }
+
+  getOrganization(): CodenvyOrganization {
+    return this.codenvyOrganization;
   }
 
   /**

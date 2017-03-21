@@ -39,13 +39,6 @@ interface ISystemPermissions {
  * @author Oleksii Orel
  */
 export class CodenvyPermissions {
-  $q: ng.IQService;
-  $resource: ng.resource.IResourceService;
-  remotePermissionsAPI: ICodenvyPermissionsResource<any>;
-  userServices: IUserServices;
-  workspacePermissions: Map<string, string>;
-  systemPermissions: ISystemPermissions;
-
   /**
    * Angular promise service.
    */
@@ -66,7 +59,7 @@ export class CodenvyPermissions {
   /**
    * Team permissions with team's id as a key.
    */
-  private teamPermissions: Map<string, any>;
+  private organizationPermissions: Map<string, any>;
   /**
    * Available system permissions.
    */
@@ -75,7 +68,7 @@ export class CodenvyPermissions {
   /**
    * Client to make remote permissions API calls.
    */
-  private remotePermissionsAPI: ng.resource.IResourceClass<ng.resource.IResource<any>>;
+  private remotePermissionsAPI: ICodenvyPermissionsResource<any>;
 
   /**
    * Default constructor that is using resource
@@ -86,7 +79,7 @@ export class CodenvyPermissions {
     this.$resource = $resource;
 
     this.workspacePermissions = new Map();
-    this.teamPermissions = new Map();
+    this.organizationPermissions = new Map();
     this.systemPermissions = null;
 
     this.userServices = {
@@ -116,15 +109,15 @@ export class CodenvyPermissions {
   }
 
   /**
-   * Fetch team permissions by team's id.
+   * Fetch team permissions by organizations's id.
    *
    * @param teamId team id
    * @returns {ng.IPromise<any>}
    */
-  fetchTeamPermissions(teamId: string): ng.IPromise<any> {
+  fetchOrganizationPermissions(teamId: string): ng.IPromise<any> {
     let promise = this.remotePermissionsAPI.getPermissionsByInstance({domain: 'organization', instance: teamId}).$promise;
-    let resultPromise = promise.then((permissions) => {
-      this.teamPermissions.set(teamId, permissions);
+    let resultPromise = promise.then((permissions: any) => {
+      this.organizationPermissions.set(teamId, permissions);
     });
 
     return resultPromise;
@@ -136,18 +129,18 @@ export class CodenvyPermissions {
    * @param teamId team id
    * @returns {*} list of team permissions
    */
-  getTeamPermissions(teamId: string): any {
-    return this.teamPermissions.get(teamId);
+  getOrganizationPermissions(teamId: string): any {
+    return this.organizationPermissions.get(teamId);
   }
 
   /**
-   * Remove permissions for pointed user in pointed team.
+   * Remove permissions for pointed user in pointed organization.
    *
    * @param teamId team id
    * @param userId user id
    * @returns {ng.IPromise<any>} request promise
    */
-  removeTeamPermissions(teamId: string, userId: string): ng.IPromise<any> {
+  removeOrganizationPermissions(teamId: string, userId: string): ng.IPromise<any> {
     let promise = this.remotePermissionsAPI.remove({domain: 'organization', instance: teamId, user: userId}).$promise;
     return promise;
   }
