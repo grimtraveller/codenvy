@@ -27,7 +27,8 @@ public class DefineExecutionConfiguration implements Step {
 
     @Override
     public void execute(WorkflowExecutor executor, Context context) {
-        context.setForkAvailable(!context.getOriginRepositoryOwner().equals(context.getHostUserLogin()));
+        String authorizedUser = context.getHostUserLogin();
+        context.setForkAvailable(authorizedUser != null && !context.getOriginRepositoryOwner().equals(authorizedUser));
         executor.done(this, context);
     }
 }

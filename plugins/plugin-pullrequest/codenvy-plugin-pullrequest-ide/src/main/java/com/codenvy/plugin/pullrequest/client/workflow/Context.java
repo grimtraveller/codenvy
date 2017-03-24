@@ -308,6 +308,7 @@ public class Context {
     public boolean isForkAvailable() {
         return forkAvailable;
     }
+
     public void setForkAvailable(boolean forkAvailable) {
         this.forkAvailable = forkAvailable;
     }

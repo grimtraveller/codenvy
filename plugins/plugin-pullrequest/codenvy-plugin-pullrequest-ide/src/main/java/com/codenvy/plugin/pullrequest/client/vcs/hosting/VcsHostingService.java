@@ -19,6 +19,7 @@ import com.codenvy.plugin.pullrequest.shared.dto.PullRequest;
 import com.codenvy.plugin.pullrequest.shared.dto.Repository;
 
 import org.eclipse.che.api.promises.client.Promise;
+import org.eclipse.che.commons.annotation.Nullable;
 import org.eclipse.che.ide.api.app.CurrentUser;
 
 import javax.validation.constraints.NotNull;
@@ -32,6 +33,7 @@ public interface VcsHostingService {
 
     /**
      * Initializes new implementation if additional data from remote url is required
+     *
      * @param remoteUrl
      * @return
      */
@@ -70,14 +72,14 @@ public interface VcsHostingService {
      * @param repository
      *         the repository name.
      * @param username
-     *         the user name.
+     *         the user name. If it is set to {@code null}, pull request will be received only by {@param branchName}.
      * @param branchName
      *         pull request branch name.
      */
-    Promise<PullRequest> getPullRequest(@NotNull String owner,
-                                        @NotNull String repository,
-                                        @NotNull String username,
-                                        @NotNull String branchName);
+    Promise<PullRequest> getPullRequest(String owner,
+                                        String repository,
+                                        @Nullable String username,
+                                        String branchName);
 
     /**
      * Creates a pull request.

@@ -24,7 +24,16 @@ import org.eclipse.che.dto.shared.DTO;
 @DTO
 public interface Repository {
     /**
-     * Returns the repository name.
+     * Returns the repository's slug.
+     */
+    String getSlug();
+
+    void setSlug(String slug);
+
+    Repository withSlug(String slug);
+
+    /**
+     * Returns the repository's name.
      */
     String getName();
 
@@ -40,4 +49,8 @@ public interface Repository {
     void setProject(Project project);
 
     Repository withProject(Project project);
+
+    Links getLinks();
+
+    void setLinks(Links links);
 }

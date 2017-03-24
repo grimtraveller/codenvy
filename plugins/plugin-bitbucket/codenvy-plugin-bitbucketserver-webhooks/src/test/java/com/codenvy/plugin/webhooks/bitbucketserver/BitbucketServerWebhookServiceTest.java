@@ -92,7 +92,7 @@ public class BitbucketServerWebhookServiceTest {
                                                         configurationProperties,
                                                         "username",
                                                         "password",
-                                                        "http://bitbucketserver.host/"));
+                                                        "http://bitbucketserver.host"));
     }
 
     @Test

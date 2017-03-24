@@ -18,6 +18,7 @@ import com.codenvy.plugin.pullrequest.client.vcs.hosting.HostingServiceTemplates
 import com.codenvy.plugin.pullrequest.client.vcs.hosting.NoCommitsInPullRequestException;
 import com.codenvy.plugin.pullrequest.client.vcs.hosting.NoPullRequestException;
 import com.codenvy.plugin.pullrequest.client.vcs.hosting.NoUserForkException;
+import com.codenvy.plugin.pullrequest.client.vcs.hosting.PullRequestAlreadyExistsException;
 import com.codenvy.plugin.pullrequest.client.vcs.hosting.ServiceUtil;
 import com.codenvy.plugin.pullrequest.client.vcs.hosting.VcsHostingService;
 import com.codenvy.plugin.pullrequest.shared.dto.HostUser;
@@ -49,6 +50,7 @@ import org.eclipse.che.ide.rest.RestContext;
 import javax.inject.Inject;
 import java.util.List;
 
+import static org.eclipse.che.api.promises.client.js.Promises.reject;
 import static org.eclipse.che.ide.ext.bitbucket.shared.BitbucketPullRequest.BitbucketPullRequestBranch;
 import static org.eclipse.che.ide.ext.bitbucket.shared.BitbucketPullRequest.BitbucketPullRequestLinks;
 import static org.eclipse.che.ide.ext.bitbucket.shared.BitbucketPullRequest.BitbucketPullRequestLocation;
@@ -67,10 +69,12 @@ public class BitbucketHostingService implements VcsHostingService {
     public static final String SERVICE_NAME     = "Bitbucket";
     public static final String DEFAULT_ENDPOINT = "https://bitbucket.org";
 
-    private static final int    MAX_FORK_CREATION_ATTEMPT             = 10;
-    private static final String REPOSITORY_EXISTS_ERROR_MESSAGE       = "You already have a repository with this name.";
-    private static final String NO_CHANGES_TO_BE_PULLED_ERROR_MESSAGE = "There are no changes to be pulled";
-    private static final String REPOSITORY_GIT_EXTENSION              = ".git";
+    private static final int    MAX_FORK_CREATION_ATTEMPT                 = 10;
+    private static final String REPOSITORY_EXISTS_ERROR_MESSAGE           = "You already have a repository with this name.";
+    private static final String NO_CHANGES_TO_BE_PULLED_ERROR_MESSAGE     = "There are no changes to be pulled";
+    private static final String PULL_REQUEST_ALREADY_EXISTS_ERROR_MESSAGE = "Only one pull request may be open for a given source " +
+                                                                            "and target branch";
+    private static final String REPOSITORY_GIT_EXTENSION                  = ".git";
 
 
     private final AppContext             appContext;
@@ -146,12 +150,13 @@ public class BitbucketHostingService implements VcsHostingService {
                                                  final BitbucketPullRequestLocation source = pullRequest.getSource();
                                                  if (author != null && source != null) {
                                                      final BitbucketPullRequestBranch branch = source.getBranch();
-                                                     if (username.equals(author.getUsername()) && branchName.equals(branch.getName())) {
+                                                     if ((author.getUsername().equals(username) || username == null) &&
+                                                         branchName.equals(branch.getName())) {
                                                          return Promises.resolve(valueOf(pullRequest));
                                                      }
                                                  }
                                              }
-                                             return Promises.reject(JsPromiseError.create(new NoPullRequestException(branchName)));
+                                             return reject(JsPromiseError.create(new NoPullRequestException(branchName)));
                                          }
                                      });
     }
@@ -164,18 +169,17 @@ public class BitbucketHostingService implements VcsHostingService {
                                                   final String baseBranchName,
                                                   final String title,
                                                   final String body) {
-        final BitbucketPullRequestLocation destination = dtoFactory.createDto(BitbucketPullRequestLocation.class)
-                                                                   .withBranch(dtoFactory.createDto(BitbucketPullRequestBranch.class)
-                                                                                         .withName(baseBranchName))
-                                                                   .withRepository(
-                                                                           dtoFactory.createDto(BitbucketPullRequestRepository.class)
-                                                                                     .withFullName(owner + '/' + repository));
+        final BitbucketPullRequestLocation destination =
+                dtoFactory.createDto(BitbucketPullRequestLocation.class).withBranch(dtoFactory.createDto(BitbucketPullRequestBranch.class)
+                                                                                              .withName(baseBranchName))
+                          .withRepository(dtoFactory.createDto(BitbucketPullRequestRepository.class)
+                                                    .withFullName(owner + '/' + repository));
 
-        final BitbucketPullRequestLocation sources = dtoFactory.createDto(BitbucketPullRequestLocation.class)
-                                                               .withBranch(dtoFactory.createDto(BitbucketPullRequestBranch.class)
-                                                                                     .withName(headBranchName))
-                                                               .withRepository(dtoFactory.createDto(BitbucketPullRequestRepository.class)
-                                                                                         .withFullName(username + '/' + repository));
+        final BitbucketPullRequestLocation sources =
+                dtoFactory.createDto(BitbucketPullRequestLocation.class)
+                          .withBranch(dtoFactory.createDto(BitbucketPullRequestBranch.class).withName(headBranchName))
+                          .withRepository(dtoFactory.createDto(BitbucketPullRequestRepository.class)
+                                                    .withFullName((username == null ? owner : username) + '/' + repository));
         final BitbucketPullRequest pullRequest = dtoFactory.createDto(BitbucketPullRequest.class)
                                                            .withTitle(title)
                                                            .withDescription(body)
@@ -188,18 +192,18 @@ public class BitbucketHostingService implements VcsHostingService {
                                              return valueOf(arg);
                                          }
                                      })
-                                     .catchError(new Operation<PromiseError>() {
-                                         @Override
-                                         public void apply(PromiseError e) throws OperationException {
-                                             if (getErrorCode(e.getCause()) == BAD_REQUEST
-                                                 && e.getMessage() != null
-                                                 && containsIgnoreCase(e.getMessage(), NO_CHANGES_TO_BE_PULLED_ERROR_MESSAGE)) {
-                                                 Promises.reject(JsPromiseError.create(new NoCommitsInPullRequestException(headBranchName,
-                                                                                                                           baseBranchName)));
-                                             } else {
-                                                 Promises.reject(e);
-                                             }
+                                     .catchErrorPromise(error -> {
+                                         final String message = error.getMessage();
+                                         if (getErrorCode(error.getCause()) == BAD_REQUEST
+                                             && message != null
+                                             && containsIgnoreCase(message, NO_CHANGES_TO_BE_PULLED_ERROR_MESSAGE)) {
+                                             return reject(JsPromiseError.create(new NoCommitsInPullRequestException(headBranchName,
+                                                                                                                     baseBranchName)));
+                                         } else if (message != null &&
+                                                    containsIgnoreCase(message, PULL_REQUEST_ALREADY_EXISTS_ERROR_MESSAGE)) {
+                                             return reject(JsPromiseError.create(new PullRequestAlreadyExistsException(headBranchName)));
                                          }
+                                         return reject(error);
                                      });
     }
 
@@ -244,7 +248,7 @@ public class BitbucketHostingService implements VcsHostingService {
                                                  }
 
                                              }
-                                             return Promises.reject(exception);
+                                             return reject(exception);
                                          }
                                      });
     }
@@ -278,9 +282,6 @@ public class BitbucketHostingService implements VcsHostingService {
         if (result.contains(":")) {
             result = result.substring(result.indexOf(":") + 1);
         }
-        if (result.startsWith("~")) {
-            result = result.substring(1);
-        }
         return result;
     }
 
@@ -299,24 +300,20 @@ public class BitbucketHostingService implements VcsHostingService {
                                                      return Promises.resolve(valueOf(repository));
                                                  }
                                              }
-                                             return Promises.reject(JsPromiseError.create(new NoUserForkException(user)));
+                                             return reject(JsPromiseError.create(new NoUserForkException(user)));
                                          }
                                      });
     }
 
     @Override
     public Promise<HostUser> getUserInfo() {
-        return bitbucketClientService.getUser(getRepositoryOwnerFromUrl(remoteUrl))
-                                     .then(new Function<BitbucketUser, HostUser>() {
-                                         @Override
-                                         public HostUser apply(BitbucketUser user) throws FunctionException {
-                                             return dtoFactory.createDto(HostUser.class)
-                                                              .withId(user.getUuid())
-                                                              .withName(user.getDisplayName())
-                                                              .withLogin(user.getUsername())
-                                                              .withUrl(user.getLinks().getSelf().getHref());
-                                         }
-                                     });
+        return bitbucketClientService.getUser()
+                                     .then((Function<BitbucketUser, HostUser>)user -> dtoFactory.createDto(HostUser.class)
+                                                                                                .withId(user.getUuid())
+                                                                                                .withName(user.getDisplayName())
+                                                                                                .withLogin(user.getUsername())
+                                                                                                .withUrl(user.getLinks().getSelf()
+                                                                                                             .getHref()));
     }
 
     @Override
@@ -360,7 +357,7 @@ public class BitbucketHostingService implements VcsHostingService {
     public Promise<HostUser> authenticate(final CurrentUser user) {
         final Workspace workspace = this.appContext.getWorkspace();
         if (workspace == null) {
-            return Promises.reject(JsPromiseError.create("Error accessing current workspace"));
+            return reject(JsPromiseError.create("Error accessing current workspace"));
         }
         String oauthPath = "https://bitbucket.org".equals(bitbucketEndpoint) ? "/oauth/authenticate?oauth_provider=bitbucket&userId=" :
                            "/oauth/1.0/authenticate?oauth_provider=bitbucket-server&request_method=post&signature_method=rsa&userId=";
@@ -377,7 +374,8 @@ public class BitbucketHostingService implements VcsHostingService {
 
     @Override
     public Promise<PullRequest> updatePullRequest(String owner, String repository, PullRequest pullRequest) {
-        return Promises.reject(JsPromiseError.create("Update pullRequest not implemented for " + getName()));
+        return bitbucketClientService.updatePullRequest(owner, repository, valueOf(pullRequest))
+                                     .then((Function<BitbucketPullRequest, PullRequest>)this::valueOf);
     }
 
     /**
@@ -441,11 +439,25 @@ public class BitbucketHostingService implements VcsHostingService {
 
         return dtoFactory.createDto(PullRequest.class)
                          .withId(pullRequestId)
+                         .withTitle(bitbucketPullRequest.getTitle())
+                         .withVersion(bitbucketPullRequest.getVersion())
+                         .withDescription(bitbucketPullRequest.getDescription())
                          .withUrl(pullRequestSelfLink != null ? pullRequestSelfLink.getHref() : null)
                          .withHtmlUrl(pullRequestHtmlLink != null ? pullRequestHtmlLink.getHref() : null)
                          .withNumber(pullRequestId)
                          .withState(bitbucketPullRequest.getState().name())
                          .withHeadRef(pullRequestBranch.getName());
+    }
+
+    /**
+     * Convert an instance of {@link PullRequest} into a {@link BitbucketPullRequest}.
+     */
+    private BitbucketPullRequest valueOf(final PullRequest pullRequest) {
+        return dtoFactory.createDto(BitbucketPullRequest.class)
+                         .withId(Integer.valueOf(pullRequest.getId()))
+                         .withTitle(pullRequest.getTitle())
+                         .withVersion(pullRequest.getVersion())
+                         .withDescription(pullRequest.getDescription());
     }
 
     /**

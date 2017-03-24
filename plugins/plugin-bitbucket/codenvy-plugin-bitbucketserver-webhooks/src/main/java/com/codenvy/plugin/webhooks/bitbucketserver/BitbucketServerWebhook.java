@@ -22,7 +22,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Link factories to a Bitbucket Server webhook.
+ * Links factories to a Bitbucket Server webhook.
  *
  * @author Igor Vinokur
  */

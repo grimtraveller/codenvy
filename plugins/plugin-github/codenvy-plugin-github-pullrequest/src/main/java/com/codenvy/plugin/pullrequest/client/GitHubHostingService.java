@@ -226,7 +226,7 @@ public class GitHubHostingService implements VcsHostingService {
 
     @Override
     public Promise<PullRequest> getPullRequest(String owner, String repository, String username, final String branchName) {
-        return gitHubClientService.getPullRequests(owner, repository, username + ':' + branchName)
+        return gitHubClientService.getPullRequests(owner, repository, username == null ? branchName : username + ':' + branchName)
                                   .thenPromise(new Function<GitHubPullRequestList, Promise<PullRequest>>() {
                                       @Override
                                       public Promise<PullRequest> apply(GitHubPullRequestList prsList) throws FunctionException {
