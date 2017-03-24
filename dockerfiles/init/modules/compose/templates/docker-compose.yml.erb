@@ -221,6 +221,7 @@ services:
        - '<%= scope.lookupvar('compose::puppet_src_folder') -%>:/puppet-configuration'
        - '<%= scope.lookupvar('compose::codenvy_folder') -%>/logs/codenvy/:/opt/codenvy-data/logs/'
        - '<%= scope.lookupvar('compose::codenvy_folder') -%>/logs/codenvy/che-machines-logs/:/opt/codenvy-data/che-machines-logs/'
+       - '<%= scope.lookupvar('compose::codenvy_folder') -%>/data/codenvy/dumps:/opt/codenvy-data/dumps'
        - '<%= scope.lookupvar('compose::codenvy_folder') -%>/data/codenvy/fs/:/opt/codenvy-data/fs/'
        - '<%= scope.lookupvar('compose::codenvy_folder') -%>/data/codenvy/license/:/opt/codenvy-data/license/'
        - '<%= scope.lookupvar('compose::codenvy_folder') -%>/data/codenvy/che-machines/:/opt/codenvy-data/che-machines/'
